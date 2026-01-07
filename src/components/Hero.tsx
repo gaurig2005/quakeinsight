@@ -57,20 +57,22 @@ const Hero = () => {
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight">
             <span className="text-gradient">Quake</span>
             <span className="text-foreground">Insight</span>
+            <span className="text-primary text-2xl md:text-3xl block mt-2">India</span>
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
-            Advanced earthquake prediction and real-time seismic monitoring powered by cutting-edge AI technology
+            Real-time earthquake monitoring for India powered by National Centre for Seismology data. 
+            Instant SMS alerts, offline safety guides, and state-wise coverage.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button variant="hero" size="xl">
+            <Button variant="hero" size="xl" onClick={() => document.getElementById("map")?.scrollIntoView({ behavior: "smooth" })}>
               <Activity className="w-5 h-5" />
-              View Live Activity
+              View India Map
             </Button>
-            <Button variant="glass" size="xl">
-              <MapPin className="w-5 h-5" />
-              Explore Risk Map
+            <Button variant="glass" size="xl" onClick={() => document.getElementById("alerts")?.scrollIntoView({ behavior: "smooth" })}>
+              <AlertTriangle className="w-5 h-5" />
+              Get SMS Alerts
             </Button>
           </div>
         </div>
@@ -78,10 +80,10 @@ const Hero = () => {
         {/* Stats */}
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
           {[
-            { icon: Activity, label: "Earthquakes Today", value: "127" },
-            { icon: AlertTriangle, label: "High Risk Alerts", value: "3" },
-            { icon: MapPin, label: "Stations Active", value: "2,847" },
-            { icon: Clock, label: "Prediction Accuracy", value: "94.7%" },
+            { icon: Activity, label: "Seismic Zones", value: "5" },
+            { icon: AlertTriangle, label: "States Covered", value: "36" },
+            { icon: MapPin, label: "NCS Stations", value: "115+" },
+            { icon: Clock, label: "Alert Delivery", value: "<10s" },
           ].map((stat, index) => (
             <div
               key={index}

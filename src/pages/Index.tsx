@@ -1,9 +1,9 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import RecentEarthquakes from "@/components/RecentEarthquakes";
-import GlobalMap from "@/components/GlobalMap";
+import IndiaMap from "@/components/IndiaMap";
+import SafetyGuide from "@/components/SafetyGuide";
+import SMSAlerts from "@/components/SMSAlerts";
 import PredictionSection from "@/components/PredictionSection";
-import AlertsSection from "@/components/AlertsSection";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -11,10 +11,10 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <Hero />
-      <RecentEarthquakes />
-      <GlobalMap />
+      <IndiaMap />
+      <SafetyGuide />
+      <SMSAlerts />
       <PredictionSection />
-      <AlertsSection />
       <Footer />
     </div>
   );
