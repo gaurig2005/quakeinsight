@@ -1,4 +1,4 @@
-import { Activity, Menu, X } from "lucide-react";
+import { Activity, Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -6,11 +6,10 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
-    { label: "Dashboard", href: "#dashboard" },
     { label: "Live Map", href: "#map" },
+    { label: "Safety Guide", href: "#safety" },
+    { label: "SMS Alerts", href: "#alerts" },
     { label: "Predictions", href: "#predictions" },
-    { label: "Alerts", href: "#alerts" },
-    { label: "About", href: "#about" },
   ];
 
   return (
@@ -23,10 +22,15 @@ const Navbar = () => {
               <Activity className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />
               <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="text-xl font-bold">
-              <span className="text-gradient">Quake</span>
-              <span className="text-foreground">Insight</span>
-            </span>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold">
+                <span className="text-gradient">Quake</span>
+                <span className="text-foreground">Insight</span>
+              </span>
+              <span className="text-[10px] text-primary flex items-center gap-1">
+                <MapPin className="w-2 h-2" /> INDIA
+              </span>
+            </div>
           </a>
 
           {/* Desktop Navigation */}
