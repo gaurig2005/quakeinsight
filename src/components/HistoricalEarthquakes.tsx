@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, History, TrendingUp, MapPin, Calendar, Filter } from "lucide-react";
+import { Loader2, History, TrendingUp, MapPin, Calendar, Filter, Download, BarChart3 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
 
 interface Earthquake {
   id: string;
@@ -76,6 +77,100 @@ const HistoricalEarthquakes = () => {
     }
   };
 
+  // Prepare timeline chart data from byDecade stats
+  const getTimelineData = () => {
+    if (!stats?.byDecade) return [];
+    return Object.entries(stats.byDecade)
+      .map(([decade, count]) => ({
+        decade,
+        count,
+        year: parseInt(decade.replace("s", ""))
+      }))
+      .sort((a, b) => a.year - b.year);
+  };
+
+  // Prepare magnitude distribution data
+  const getMagnitudeDistribution = () => {
+    if (earthquakes.length === 0) return [];
+    const ranges = [
+      { range: "4.0-4.9", min: 4, max: 4.9, count: 0 },
+      { range: "5.0-5.9", min: 5, max: 5.9, count: 0 },
+      { range: "6.0-6.9", min: 6, max: 6.9, count: 0 },
+      { range: "7.0-7.9", min: 7, max: 7.9, count: 0 },
+      { range: "8.0+", min: 8, max: 10, count: 0 },
+    ];
+    earthquakes.forEach(eq => {
+      const r = ranges.find(r => eq.magnitude >= r.min && eq.magnitude <= r.max);
+      if (r) r.count++;
+    });
+    return ranges;
+  };
+
+  // Export to CSV
+  const exportToCSV = () => {
+    if (earthquakes.length === 0) return;
+    
+    const headers = ["Date", "Magnitude", "Location", "State", "Region", "Depth (km)", "Latitude", "Longitude"];
+    const rows = earthquakes.map(eq => [
+      new Date(eq.time).toISOString().split("T")[0],
+      eq.magnitude.toFixed(1),
+      `"${eq.location.replace(/"/g, '""')}"`,
+      eq.state,
+      eq.region,
+      eq.depth.toFixed(1),
+      eq.coordinates.lat.toFixed(4),
+      eq.coordinates.lng.toFixed(4)
+    ]);
+    
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    downloadFile(csvContent, "india_earthquakes.csv", "text/csv");
+  };
+
+  // Export to JSON
+  const exportToJSON = () => {
+    if (earthquakes.length === 0) return;
+    
+    const exportData = {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        yearRange: `${yearRange[0]}-${yearRange[1]}`,
+        minMagnitude,
+        totalRecords: earthquakes.length,
+        source: "NCS India / USGS Historical Data"
+      },
+      statistics: stats,
+      earthquakes: earthquakes.map(eq => ({
+        date: new Date(eq.time).toISOString().split("T")[0],
+        magnitude: eq.magnitude,
+        location: eq.location,
+        state: eq.state,
+        region: eq.region,
+        depth_km: eq.depth,
+        latitude: eq.coordinates.lat,
+        longitude: eq.coordinates.lng,
+        isHistorical: eq.isHistorical || false
+      }))
+    };
+    
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    downloadFile(jsonContent, "india_earthquakes.json", "application/json");
+  };
+
+  const downloadFile = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const timelineData = getTimelineData();
+  const magnitudeData = getMagnitudeDistribution();
+
   return (
     <section id="historical" className="py-20 bg-card/30 relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-gradient-glow rounded-full opacity-30" />
@@ -139,7 +234,7 @@ const HistoricalEarthquakes = () => {
             </div>
           </div>
           
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex flex-wrap justify-center gap-4">
             <Button 
               onClick={fetchHistoricalData} 
               disabled={loading}
@@ -158,6 +253,29 @@ const HistoricalEarthquakes = () => {
                 </>
               )}
             </Button>
+            
+            {earthquakes.length > 0 && (
+              <>
+                <Button 
+                  onClick={exportToCSV} 
+                  variant="outline"
+                  size="lg"
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </Button>
+                <Button 
+                  onClick={exportToJSON} 
+                  variant="outline"
+                  size="lg"
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Export JSON
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -185,6 +303,100 @@ const HistoricalEarthquakes = () => {
             <div className="glass-card rounded-xl p-6 text-center">
               <p className="text-4xl font-bold text-primary font-mono">{Object.keys(stats.byRegion).length}</p>
               <p className="text-sm text-muted-foreground mt-1">Regions Affected</p>
+            </div>
+          </div>
+        )}
+
+        {/* Timeline Charts */}
+        {dataFetched && timelineData.length > 0 && (
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+            {/* Earthquake Frequency Timeline */}
+            <div className="glass-card rounded-2xl p-6">
+              <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Earthquake Frequency by Decade
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={timelineData}>
+                    <defs>
+                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="decade" 
+                      stroke="hsl(var(--muted-foreground))"
+                      tick={{ fontSize: 11 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        color: 'hsl(var(--foreground))'
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="hsl(var(--primary))" 
+                      fillOpacity={1} 
+                      fill="url(#colorCount)" 
+                      name="Earthquakes"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Magnitude Distribution */}
+            <div className="glass-card rounded-2xl p-6">
+              <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                Magnitude Distribution
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={magnitudeData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="range" 
+                      stroke="hsl(var(--muted-foreground))"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        color: 'hsl(var(--foreground))'
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <Bar 
+                      dataKey="count" 
+                      name="Count"
+                      radius={[4, 4, 0, 0]}
+                      fill="hsl(var(--primary))"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         )}
