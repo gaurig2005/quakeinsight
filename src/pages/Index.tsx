@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import IndiaMap from "@/components/IndiaMap";
+import HistoricalEarthquakes from "@/components/HistoricalEarthquakes";
 import SafetyGuide from "@/components/SafetyGuide";
 import SMSAlerts from "@/components/SMSAlerts";
 import PredictionSection from "@/components/PredictionSection";
@@ -12,6 +13,7 @@ const Index = () => {
       <Navbar />
       <Hero />
       <IndiaMap />
+      <HistoricalEarthquakes />
       <SafetyGuide />
       <SMSAlerts />
       <PredictionSection />
