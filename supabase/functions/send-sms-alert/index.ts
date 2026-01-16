@@ -22,9 +22,9 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`SMS Alert Request - Phone: ${phoneNumber}, State: ${state}, MinMag: ${minMagnitude}`);
     
-    // Validate Indian phone number
-    const cleanedNumber = phoneNumber.replace(/\s/g, "").replace(/-/g, "");
-    const isValidIndianNumber = /^(\+91|91)?[6-9]\d{9}$/.test(cleanedNumber);
+    // Validate Indian phone number (10 digits starting with 6-9)
+    const cleanedNumber = phoneNumber.replace(/\s/g, "").replace(/-/g, "").replace("+91", "").replace("91", "");
+    const isValidIndianNumber = /^[6-9]\d{9}$/.test(cleanedNumber);
     
     if (!isValidIndianNumber) {
       console.error("Invalid phone number format:", cleanedNumber);
@@ -34,99 +34,76 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Format to E.164 format
-    let formattedNumber = cleanedNumber;
-    if (formattedNumber.startsWith("+91")) {
-      // Already in correct format
-    } else if (formattedNumber.startsWith("91") && formattedNumber.length === 12) {
-      formattedNumber = "+" + formattedNumber;
-    } else if (formattedNumber.length === 10) {
-      formattedNumber = "+91" + formattedNumber;
-    }
-    
-    console.log("Formatted phone number:", formattedNumber);
+    console.log("Cleaned phone number:", cleanedNumber);
 
-    // Get Twilio credentials from environment
-    const twilioAccountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const twilioPhoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
+    // Get Fast2SMS API key from environment
+    const fast2smsApiKey = Deno.env.get("FAST2SMS_API_KEY");
 
-    // Log credential status (not the actual values)
-    console.log("Twilio credentials check:", {
-      hasAccountSid: !!twilioAccountSid,
-      accountSidLength: twilioAccountSid?.length || 0,
-      hasAuthToken: !!twilioAuthToken,
-      authTokenLength: twilioAuthToken?.length || 0,
-      hasPhoneNumber: !!twilioPhoneNumber,
-      phoneNumber: twilioPhoneNumber || "not set"
+    console.log("Fast2SMS API Key check:", {
+      hasApiKey: !!fast2smsApiKey,
+      keyLength: fast2smsApiKey?.length || 0,
     });
 
-    if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-      console.error("Missing Twilio credentials");
+    if (!fast2smsApiKey) {
+      console.error("Missing Fast2SMS API key");
       return new Response(
-        JSON.stringify({ error: "SMS service not configured. Please contact administrator." }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Validate Twilio Account SID format (should start with AC and be 34 chars)
-    if (!twilioAccountSid.startsWith("AC") || twilioAccountSid.length !== 34) {
-      console.error("Invalid Twilio Account SID format. Expected: starts with 'AC', length 34. Got length:", twilioAccountSid.length);
-      return new Response(
-        JSON.stringify({ error: "SMS service configuration error. Invalid Account SID format." }),
+        JSON.stringify({ error: "SMS service not configured. Please add FAST2SMS_API_KEY." }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
     // Create confirmation message
-    const message = `🌍 QuakeInsight Alert Registered!\n\nYou will receive SMS alerts for earthquakes:\n📍 State: ${state}\n📊 Min Magnitude: ${minMagnitude}+\n\nStay safe! Reply STOP to unsubscribe.`;
+    const message = `QuakeInsight Alert Registered! You will receive SMS alerts for earthquakes in ${state} with magnitude ${minMagnitude}+. Stay safe!`;
 
-    // Twilio API endpoint
-    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
+    // Fast2SMS API endpoint (using Quick SMS route - free)
+    const fast2smsUrl = "https://www.fast2sms.com/dev/bulkV2";
     
-    console.log("Sending SMS via Twilio...");
-    console.log("To:", formattedNumber);
-    console.log("From:", twilioPhoneNumber);
+    console.log("Sending SMS via Fast2SMS...");
+    console.log("To:", cleanedNumber);
+    console.log("Message:", message);
 
-    // Send SMS via Twilio
-    const authHeader = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
-    
-    const twilioResponse = await fetch(twilioUrl, {
+    // Send SMS via Fast2SMS
+    const response = await fetch(fast2smsUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Basic ${authHeader}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        "authorization": fast2smsApiKey,
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
-        To: formattedNumber,
-        From: twilioPhoneNumber,
-        Body: message,
-      }).toString(),
+      body: JSON.stringify({
+        route: "q", // Quick SMS route (free)
+        message: message,
+        language: "english",
+        flash: 0,
+        numbers: cleanedNumber,
+      }),
     });
 
-    const responseText = await twilioResponse.text();
-    console.log("Twilio response status:", twilioResponse.status);
-    console.log("Twilio response:", responseText);
+    const responseText = await response.text();
+    console.log("Fast2SMS response status:", response.status);
+    console.log("Fast2SMS response:", responseText);
 
-    if (!twilioResponse.ok) {
-      let errorMessage = "Failed to send SMS";
-      try {
-        const errorData = JSON.parse(responseText);
-        console.error("Twilio error details:", errorData);
-        errorMessage = errorData.message || errorMessage;
-        
-        // Provide user-friendly error messages
-        if (errorData.code === 20003) {
-          errorMessage = "SMS service authentication failed. Please check credentials.";
-        } else if (errorData.code === 21211) {
-          errorMessage = "Invalid 'To' phone number format.";
-        } else if (errorData.code === 21608) {
-          errorMessage = "The 'From' number is not verified for this region.";
-        } else if (errorData.code === 21610) {
-          errorMessage = "This number has unsubscribed from SMS.";
-        }
-      } catch (e) {
-        console.error("Could not parse Twilio error response");
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Could not parse Fast2SMS response:", responseText);
+      return new Response(
+        JSON.stringify({ error: "Invalid response from SMS service" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!result.return) {
+      console.error("Fast2SMS error:", result);
+      let errorMessage = result.message || "Failed to send SMS";
+      
+      // Common Fast2SMS errors
+      if (result.status_code === 411) {
+        errorMessage = "Invalid API key. Please check your Fast2SMS API key.";
+      } else if (result.status_code === 412) {
+        errorMessage = "Insufficient balance. Please recharge your Fast2SMS account.";
+      } else if (result.status_code === 413) {
+        errorMessage = "Invalid mobile number format.";
       }
       
       return new Response(
@@ -135,14 +112,13 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const result = JSON.parse(responseText);
-    console.log("SMS sent successfully! SID:", result.sid);
+    console.log("SMS sent successfully! Request ID:", result.request_id);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Alert registered! You will receive a confirmation SMS shortly.",
-        sid: result.sid 
+        requestId: result.request_id 
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
