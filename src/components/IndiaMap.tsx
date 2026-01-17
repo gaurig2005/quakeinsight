@@ -223,7 +223,7 @@ const IndiaMap = () => {
       markersRef.current.forEach(m => m.remove());
       map.current?.remove();
     };
-  }, []);
+  }, [mapboxToken, fetchEarthquakes]);
 
   // Auto-refresh based on live status - every 1 minute when live, 5 minutes otherwise
   useEffect(() => {
