@@ -1,0 +1,123 @@
+{
+  "nav": {
+    "map": "Map",
+    "monitoring": "Monitoring",
+    "predictions": "Predictions",
+    "safety": "Safety",
+    "alerts": "Alerts",
+    "emergency": "Emergency",
+    "language": "Language"
+  },
+  "hero": {
+    "badge": "Real-Time Seismic Monitoring",
+    "title": "Early Warning",
+    "subtitle": "Earthquake Prediction",
+    "description": "Advanced AI-powered earthquake monitoring and prediction system for India. Get real-time alerts and stay prepared with our comprehensive safety platform.",
+    "viewMap": "View Live Map",
+    "safetyGuide": "Safety Guide"
+  },
+  "map": {
+    "title": "India Seismic Activity Map",
+    "live": "LIVE",
+    "connecting": "Connecting...",
+    "offline": "Offline",
+    "updated": "Updated",
+    "refresh": "Refresh",
+    "last24h": "Last 24h",
+    "events": "events",
+    "magnitude": "Magnitude",
+    "depth": "Depth",
+    "recentEvents": "Recent Seismic Events",
+    "showingLatest": "Showing latest 6 events"
+  },
+  "safety": {
+    "title": "Earthquake Safety Guide",
+    "subtitle": "Essential safety information for before, during, and after an earthquake.",
+    "offlineAvailable": "Offline Safety Guide",
+    "before": "Before an Earthquake",
+    "during": "During an Earthquake",
+    "after": "After an Earthquake",
+    "emergencyKit": "Emergency Kit",
+    "familyPlan": "Family Emergency Plan",
+    "secureHome": "Secure Your Home",
+    "ifIndoors": "If Indoors",
+    "ifOutdoors": "If Outdoors",
+    "ifVehicle": "If in a Vehicle",
+    "immediateActions": "Immediate Actions",
+    "stayInformed": "Stay Informed",
+    "accessResources": "Access Resources",
+    "dropCoverHold": "DROP, COVER, HOLD ON",
+    "printGuide": "Print Safety Guide",
+    "saveOffline": "Save for Offline Access"
+  },
+  "alerts": {
+    "title": "SMS Earthquake Alerts",
+    "description": "Get instant SMS notifications when earthquakes occur above your threshold.",
+    "phone": "Phone Number",
+    "threshold": "Magnitude Threshold",
+    "subscribe": "Subscribe to Alerts",
+    "success": "Successfully subscribed!",
+    "error": "Failed to subscribe",
+    "verified": "Verified",
+    "underVerification": "Under Verification",
+    "unverified": "Unverified"
+  },
+  "emergency": {
+    "title": "Emergency Response",
+    "subtitle": "Find nearest emergency services and resources",
+    "hospitals": "Hospitals",
+    "bloodBanks": "Blood Banks",
+    "shelters": "Shelters",
+    "police": "Police",
+    "fire": "Fire Station",
+    "ambulance": "Ambulance",
+    "findNearest": "Find Nearest",
+    "distance": "Distance",
+    "open24h": "Open 24 Hours",
+    "call": "Call",
+    "directions": "Get Directions",
+    "helplines": "Emergency Helplines",
+    "ndma": "NDMA Helpline"
+  },
+  "voice": {
+    "title": "Voice Assistant",
+    "listen": "Listen to Updates",
+    "speaking": "Speaking...",
+    "aftershockAlert": "Aftershock Alert",
+    "probability": "Probability",
+    "safetyTip": "Safety Tip",
+    "tapToListen": "Tap to Listen"
+  },
+  "prediction": {
+    "title": "Earthquake Prediction",
+    "aiPowered": "AI-Powered Predictions",
+    "probability": "Probability",
+    "magnitude": "Expected Magnitude",
+    "timeframe": "Timeframe",
+    "aftershock": "Aftershock Probability",
+    "omoriLaw": "Based on Omori's Law",
+    "clustering": "Earthquake Clustering",
+    "declustering": "Mainshock vs Aftershock",
+    "bValue": "Gutenberg-Richter b-Value",
+    "accuracy": "Model Accuracy"
+  },
+  "offline": {
+    "status": "Offline Mode",
+    "lastSync": "Last synced",
+    "cachedData": "Cached data available",
+    "syncNow": "Sync Now"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "km": "km",
+    "minutes": "minutes",
+    "hours": "hours",
+    "days": "days",
+    "ago": "ago"
+  }
+}
