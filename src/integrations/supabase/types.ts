@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      earthquakes: {
+        Row: {
+          created_at: string
+          depth: number
+          id: string
+          is_historical: boolean
+          latitude: number
+          location: string
+          longitude: number
+          magnitude: number
+          occurred_at: string
+          region: string
+          source: string
+          state: string
+        }
+        Insert: {
+          created_at?: string
+          depth?: number
+          id: string
+          is_historical?: boolean
+          latitude: number
+          location: string
+          longitude: number
+          magnitude: number
+          occurred_at: string
+          region?: string
+          source?: string
+          state?: string
+        }
+        Update: {
+          created_at?: string
+          depth?: number
+          id?: string
+          is_historical?: boolean
+          latitude?: number
+          location?: string
+          longitude?: number
+          magnitude?: number
+          occurred_at?: string
+          region?: string
+          source?: string
+          state?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
