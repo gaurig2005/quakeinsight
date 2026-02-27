@@ -37,8 +37,8 @@ const HistoricalEarthquakes = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [yearRange, setYearRange] = useState([1500, 2024]);
-  const [minMagnitude, setMinMagnitude] = useState(5);
+  const [yearRange, setYearRange] = useState([1976, 2026]);
+  const [minMagnitude, setMinMagnitude] = useState(3);
   const [dataFetched, setDataFetched] = useState(false);
 
   const fetchHistoricalData = async () => {
@@ -136,7 +136,7 @@ const HistoricalEarthquakes = () => {
         yearRange: `${yearRange[0]}-${yearRange[1]}`,
         minMagnitude,
         totalRecords: earthquakes.length,
-        source: "NCS India / USGS Historical Data"
+        source: "National Center for Seismology (NCS) / USGS"
       },
       statistics: stats,
       earthquakes: earthquakes.map(eq => ({
@@ -182,10 +182,10 @@ const HistoricalEarthquakes = () => {
             <span className="text-sm font-medium">Historical Archive</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            500+ Years of Seismic History
+            50 Years of India Seismic Data
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Explore India's comprehensive earthquake catalog from 1500 CE to present, compiled from NCS, USGS, and historical geological surveys.
+            Explore India's earthquake catalog from 1976 to present, sourced from National Center for Seismology (NCS) &amp; USGS.
           </p>
         </div>
 
@@ -204,14 +204,14 @@ const HistoricalEarthquakes = () => {
               <Slider
                 value={yearRange}
                 onValueChange={setYearRange}
-                min={1500}
-                max={2024}
-                step={10}
+                min={1976}
+                max={2026}
+                step={1}
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                <span>1500 CE</span>
-                <span>2024 CE</span>
+                <span>1976</span>
+                <span>2026</span>
               </div>
             </div>
             
@@ -222,13 +222,13 @@ const HistoricalEarthquakes = () => {
               <Slider
                 value={[minMagnitude]}
                 onValueChange={(val) => setMinMagnitude(val[0])}
-                min={4}
+                min={2}
                 max={8}
                 step={0.5}
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                <span>M 4.0</span>
+                <span>M 2.0</span>
                 <span>M 8.0+</span>
               </div>
             </div>
