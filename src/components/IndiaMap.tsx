@@ -117,7 +117,8 @@ const IndiaMap = () => {
       const { data, error: fnError } = await supabase.functions.invoke("fetch-earthquakes");
       if (fnError) {
         // Check for transient 522/5xx errors and retry
-        const isTransient = fnError.message?.includes("522") || fnError.message?.includes("Connection timed out") || fnError.message?.includes("500");
+        const errMsg = fnError.message || JSON.stringify(fnError);
+        const isTransient = errMsg.includes("522") || errMsg.includes("525") || errMsg.includes("Connection timed out") || errMsg.includes("SSL handshake") || errMsg.includes("500") || errMsg.includes("<!DOCTYPE");
         if (isTransient && retries > 0) {
           console.warn(`Transient error, retrying... (${retries} left)`);
           await new Promise(r => setTimeout(r, 2000));
