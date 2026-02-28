@@ -109,13 +109,22 @@ const IndiaMap = () => {
     });
   }, []);
 
-  const fetchEarthquakes = useCallback(async () => {
+  const fetchEarthquakes = useCallback(async (retries = 2) => {
     try {
       setLoading(true);
       setError(null);
 
       const { data, error: fnError } = await supabase.functions.invoke("fetch-earthquakes");
-      if (fnError) throw fnError;
+      if (fnError) {
+        // Check for transient 522/5xx errors and retry
+        const isTransient = fnError.message?.includes("522") || fnError.message?.includes("Connection timed out") || fnError.message?.includes("500");
+        if (isTransient && retries > 0) {
+          console.warn(`Transient error, retrying... (${retries} left)`);
+          await new Promise(r => setTimeout(r, 2000));
+          return fetchEarthquakes(retries - 1);
+        }
+        throw fnError;
+      }
 
       const quakes = data.earthquakes || [];
       setEarthquakes(quakes);
@@ -123,7 +132,7 @@ const IndiaMap = () => {
       addMarkersToMap(quakes);
     } catch (err: any) {
       console.error("Error fetching earthquakes:", err);
-      setError(err.message || "Failed to fetch earthquake data");
+      setError("Temporary connection issue. Please click Refresh to try again.");
     } finally {
       setLoading(false);
     }
