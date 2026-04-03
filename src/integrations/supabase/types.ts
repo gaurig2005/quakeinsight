@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_subscriptions: {
+        Row: {
+          alert_type: string
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          min_magnitude: number
+          state: string
+          whatsapp_number: string | null
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          min_magnitude?: number
+          state?: string
+          whatsapp_number?: string | null
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          min_magnitude?: number
+          state?: string
+          whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
       earthquakes: {
         Row: {
           created_at: string
