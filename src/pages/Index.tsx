@@ -4,7 +4,7 @@ import IndiaMap from "@/components/IndiaMap";
 import SeismicMonitoringDashboard from "@/components/SeismicMonitoringDashboard";
 import HistoricalEarthquakes from "@/components/HistoricalEarthquakes";
 import SafetyGuide from "@/components/SafetyGuide";
-import SMSAlerts from "@/components/SMSAlerts";
+import AlertsSection from "@/components/AlertsSection";
 import PredictionSection from "@/components/PredictionSection";
 import Footer from "@/components/Footer";
 
@@ -17,7 +17,7 @@ const Index = () => {
       <SeismicMonitoringDashboard />
       <HistoricalEarthquakes />
       <SafetyGuide />
-      <SMSAlerts />
+      <AlertsSection />
       <PredictionSection />
       <Footer />
     </div>
