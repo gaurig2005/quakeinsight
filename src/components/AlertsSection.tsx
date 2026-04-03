@@ -120,7 +120,7 @@ const AlertsSection = () => {
           <div className="glass-card rounded-2xl p-8 border-primary/20">
             {success ? (
               <div className="text-center py-8">
-                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                <CheckCircle className="w-16 h-16 text-[hsl(var(--success))] mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-foreground mb-2">Alert Registered!</h3>
                 <p className="text-muted-foreground">You'll be notified when earthquakes happen in your region.</p>
               </div>

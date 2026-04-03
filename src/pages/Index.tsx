@@ -17,7 +17,7 @@ const Index = () => {
       <SeismicMonitoringDashboard />
       <HistoricalEarthquakes />
       <SafetyGuide />
-      <SMSAlerts />
+      <AlertsSection />
       <PredictionSection />
       <Footer />
     </div>
