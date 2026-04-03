@@ -8,7 +8,7 @@ const Navbar = () => {
   const navItems = [
     { label: "Live Map", href: "#map" },
     { label: "Safety Guide", href: "#safety" },
-    { label: "SMS Alerts", href: "#alerts" },
+    { label: "Alerts", href: "#alerts" },
     { label: "Predictions", href: "#predictions" },
   ];
 
