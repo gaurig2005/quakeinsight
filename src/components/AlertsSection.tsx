@@ -3,6 +3,7 @@ import { Bell, Mail, MessageCircle, MapPin, AlertTriangle, CheckCircle, Loader2,
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 const indianStates = [
   "All India", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar",
@@ -23,6 +24,7 @@ const magnitudeOptions = [
 type AlertType = "email" | "whatsapp" | "both";
 
 const AlertsSection = () => {
+  const { t } = useTranslation();
   const [alertType, setAlertType] = useState<AlertType>("both");
   const [email, setEmail] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -90,24 +92,23 @@ const AlertsSection = () => {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-4">
             <Bell className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Earthquake Alerts</span>
+            <span className="text-sm font-medium text-primary">{t("alerts.badge")}</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Get Instant Earthquake Alerts
+            {t("alerts.title")}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Receive instant notifications via Email and WhatsApp when earthquakes occur in your region.
+            {t("alerts.description")}
           </p>
         </div>
 
         <div className="max-w-2xl mx-auto">
-          {/* Feature highlights */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
-              { icon: Mail, label: "Email Alerts" },
-              { icon: MessageCircle, label: "WhatsApp Alerts" },
-              { icon: MapPin, label: "State-wise" },
-              { icon: Shield, label: "Free Forever" },
+              { icon: Mail, label: t("alerts.emailAlerts") },
+              { icon: MessageCircle, label: t("alerts.whatsappAlerts") },
+              { icon: MapPin, label: t("alerts.stateWise") },
+              { icon: Shield, label: t("alerts.freeForever") },
             ].map((f, i) => (
               <div key={i} className="glass-card rounded-lg p-4 text-center">
                 <f.icon className="w-6 h-6 text-primary mx-auto mb-2" />
@@ -116,24 +117,22 @@ const AlertsSection = () => {
             ))}
           </div>
 
-          {/* Form */}
           <div className="glass-card rounded-2xl p-8 border-primary/20">
             {success ? (
               <div className="text-center py-8">
                 <CheckCircle className="w-16 h-16 text-[hsl(var(--success))] mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-foreground mb-2">Alert Registered!</h3>
-                <p className="text-muted-foreground">You'll be notified when earthquakes happen in your region.</p>
+                <h3 className="text-2xl font-bold text-foreground mb-2">{t("alerts.successTitle")}</h3>
+                <p className="text-muted-foreground">{t("alerts.successDesc")}</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Alert Type Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-3">Alert Channel</label>
+                  <label className="block text-sm font-medium text-foreground mb-3">{t("alerts.alertChannel")}</label>
                   <div className="grid grid-cols-3 gap-2">
                     {([
-                      { value: "email" as AlertType, label: "Email Only", icon: Mail },
-                      { value: "whatsapp" as AlertType, label: "WhatsApp Only", icon: MessageCircle },
-                      { value: "both" as AlertType, label: "Both", icon: Bell },
+                      { value: "email" as AlertType, label: t("alerts.emailOnly"), icon: Mail },
+                      { value: "whatsapp" as AlertType, label: t("alerts.whatsappOnly"), icon: MessageCircle },
+                      { value: "both" as AlertType, label: t("alerts.both"), icon: Bell },
                     ]).map((opt) => (
                       <button
                         key={opt.value}
@@ -152,10 +151,9 @@ const AlertsSection = () => {
                   </div>
                 </div>
 
-                {/* Email Input */}
                 {(alertType === "email" || alertType === "both") && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Email Address</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">{t("alerts.emailAddress")}</label>
                     <input
                       type="email"
                       placeholder="your@email.com"
@@ -166,10 +164,9 @@ const AlertsSection = () => {
                   </div>
                 )}
 
-                {/* WhatsApp Input */}
                 {(alertType === "whatsapp" || alertType === "both") && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">WhatsApp Number (India)</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">{t("alerts.whatsappNumber")}</label>
                     <div className="flex">
                       <span className="inline-flex items-center px-4 rounded-l-xl bg-secondary border border-r-0 border-border text-muted-foreground">
                         +91
@@ -186,9 +183,8 @@ const AlertsSection = () => {
                   </div>
                 )}
 
-                {/* State Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Select State / Region</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t("alerts.selectState")}</label>
                   <select
                     value={selectedState}
                     onChange={(e) => setSelectedState(e.target.value)}
@@ -200,9 +196,8 @@ const AlertsSection = () => {
                   </select>
                 </div>
 
-                {/* Magnitude Threshold */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Minimum Magnitude</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t("alerts.minMagnitude")}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {magnitudeOptions.map((opt) => (
                       <button
@@ -221,45 +216,37 @@ const AlertsSection = () => {
                   </div>
                 </div>
 
-                {/* Submit */}
-                <Button
-                  type="submit"
-                  variant="hero"
-                  size="xl"
-                  className="w-full"
-                  disabled={isSubmitDisabled}
-                >
+                <Button type="submit" variant="hero" size="xl" className="w-full" disabled={isSubmitDisabled}>
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Registering...
+                      {t("alerts.registering")}
                     </>
                   ) : (
                     <>
                       <Bell className="w-5 h-5" />
-                      Subscribe to Alerts
+                      {t("alerts.subscribe")}
                     </>
                   )}
                 </Button>
 
                 <p className="text-xs text-muted-foreground text-center">
-                  Free forever. Unsubscribe anytime. No spam, ever.
+                  {t("alerts.freeNote")}
                 </p>
               </form>
             )}
           </div>
 
-          {/* Info */}
           <div className="mt-8 glass-card rounded-xl p-6">
             <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-primary" />
-              Why Subscribe?
+              {t("alerts.whySubscribe")}
             </h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• <strong>Instant delivery</strong> — Receive alerts within seconds of earthquake detection</li>
-              <li>• <strong>Location-specific</strong> — Only get alerts relevant to your state</li>
-              <li>• <strong>Multi-channel</strong> — Get notified via Email, WhatsApp, or both</li>
-              <li>• <strong>Powered by NCS</strong> — Data from National Centre for Seismology, India</li>
+              <li>• <strong>{t("alerts.instantDelivery")}</strong> — {t("alerts.instantDeliveryDesc")}</li>
+              <li>• <strong>{t("alerts.locationSpecific")}</strong> — {t("alerts.locationSpecificDesc")}</li>
+              <li>• <strong>{t("alerts.multiChannel")}</strong> — {t("alerts.multiChannelDesc")}</li>
+              <li>• <strong>{t("alerts.poweredByNCS")}</strong> — {t("alerts.poweredByNCSDesc")}</li>
             </ul>
           </div>
         </div>

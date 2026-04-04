@@ -1,22 +1,24 @@
 import { Activity, Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
 
   const navItems = [
-    { label: "Live Map", href: "#map" },
-    { label: "Safety Guide", href: "#safety" },
-    { label: "Alerts", href: "#alerts" },
-    { label: "Predictions", href: "#predictions" },
+    { label: t("nav.liveMap"), href: "#map" },
+    { label: t("nav.safetyGuide"), href: "#safety" },
+    { label: t("nav.alerts"), href: "#alerts" },
+    { label: t("nav.predictions"), href: "#predictions" },
   ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-border/30">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <a href="/" className="flex items-center gap-2 group">
             <div className="relative">
               <Activity className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />
@@ -33,11 +35,10 @@ const Navbar = () => {
             </div>
           </a>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => (
               <a
-                key={item.label}
+                key={item.href}
                 href={item.href}
                 className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary/50"
               >
@@ -46,10 +47,10 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* CTA & Mobile Menu */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <Button variant="default" size="sm" className="hidden md:flex">
-              Get Alerts
+              {t("nav.getAlerts")}
             </Button>
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -60,12 +61,11 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         {isOpen && (
           <div className="md:hidden py-4 border-t border-border/30 animate-slide-up">
             {navItems.map((item) => (
               <a
-                key={item.label}
+                key={item.href}
                 href={item.href}
                 className="block px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
                 onClick={() => setIsOpen(false)}
@@ -75,7 +75,7 @@ const Navbar = () => {
             ))}
             <div className="mt-4 px-4">
               <Button variant="default" className="w-full">
-                Get Alerts
+                {t("nav.getAlerts")}
               </Button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { Activity, MapPin, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import heroImage from "@/assets/hero-seismic.jpg";
 
 const SeismicWave = () => (
@@ -24,66 +25,58 @@ const SeismicWave = () => (
 );
 
 const Hero = () => {
+  const { t } = useTranslation();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${heroImage})` }}
       />
-      
-      {/* Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background" />
-      
-      {/* Animated glow effect */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-glow rounded-full animate-pulse-slow" />
-      
       <SeismicWave />
       
-      {/* Content */}
       <div className="relative z-10 container mx-auto px-4 text-center">
         <div className="animate-slide-up">
-          {/* Live indicator */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/50 backdrop-blur-sm border border-border/50 mb-8">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-seismic-high opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-seismic-high"></span>
             </span>
             <span className="text-sm font-medium text-muted-foreground">
-              Live Monitoring Active
+              {t("hero.liveMonitoring")}
             </span>
           </div>
           
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight">
             <span className="text-gradient">Quake</span>
             <span className="text-foreground">Insight</span>
-            <span className="text-primary text-2xl md:text-3xl block mt-2">India</span>
+            <span className="text-primary text-2xl md:text-3xl block mt-2">{t("hero.india")}</span>
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
-            Real-time earthquake monitoring for India powered by National Centre for Seismology data. 
-            Instant SMS alerts, offline safety guides, and state-wise coverage.
+            {t("hero.description")}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button variant="hero" size="xl" onClick={() => document.getElementById("map")?.scrollIntoView({ behavior: "smooth" })}>
               <Activity className="w-5 h-5" />
-              View India Map
+              {t("hero.viewMap")}
             </Button>
             <Button variant="glass" size="xl" onClick={() => document.getElementById("alerts")?.scrollIntoView({ behavior: "smooth" })}>
               <AlertTriangle className="w-5 h-5" />
-              Get Alerts
+              {t("hero.getAlerts")}
             </Button>
           </div>
         </div>
         
-        {/* Stats */}
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
           {[
-            { icon: Activity, label: "Seismic Zones", value: "5" },
-            { icon: AlertTriangle, label: "States Covered", value: "36" },
-            { icon: MapPin, label: "NCS Stations", value: "115+" },
-            { icon: Clock, label: "Alert Delivery", value: "<10s" },
+            { icon: Activity, label: t("hero.seismicZones"), value: "5" },
+            { icon: AlertTriangle, label: t("hero.statesCovered"), value: "36" },
+            { icon: MapPin, label: t("hero.ncsStations"), value: "115+" },
+            { icon: Clock, label: t("hero.alertDelivery"), value: "<10s" },
           ].map((stat, index) => (
             <div
               key={index}
@@ -98,7 +91,6 @@ const Hero = () => {
         </div>
       </div>
       
-      {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
         <div className="w-6 h-10 border-2 border-muted-foreground/30 rounded-full flex justify-center">
           <div className="w-1 h-3 bg-muted-foreground/50 rounded-full mt-2 animate-pulse" />
