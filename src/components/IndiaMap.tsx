@@ -114,6 +114,7 @@ const IndiaMap = () => {
     map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
 
     map.current.on("load", () => {
+      // Add proper India boundary outline
       map.current?.addSource("india-boundary", {
         type: "geojson",
         data: {
@@ -121,8 +122,18 @@ const IndiaMap = () => {
           properties: {},
           geometry: {
             type: "Polygon",
-            coordinates: [[[68, 8], [68, 35], [97, 35], [97, 8], [68, 8]]],
+            coordinates: [indiaBoundaryCoordinates],
           },
+        },
+      });
+
+      map.current?.addLayer({
+        id: "india-boundary-fill",
+        type: "fill",
+        source: "india-boundary",
+        paint: {
+          "fill-color": "hsl(var(--primary))",
+          "fill-opacity": 0.05,
         },
       });
 
@@ -131,11 +142,50 @@ const IndiaMap = () => {
         type: "line",
         source: "india-boundary",
         paint: {
-          "line-color": "#f59e0b",
-          "line-width": 1,
-          "line-opacity": 0.3,
-          "line-dasharray": [4, 2],
+          "line-color": "hsl(var(--primary))",
+          "line-width": 2,
+          "line-opacity": 0.6,
         },
+      });
+
+      // Add seismic zone hotspots
+      seismicZones.forEach((zone, index) => {
+        zone.coordinates.forEach((coords, ci) => {
+          const sourceId = `seismic-zone-${index}-${ci}`;
+          map.current?.addSource(sourceId, {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              properties: { name: zone.name },
+              geometry: {
+                type: "Polygon",
+                coordinates: [coords],
+              },
+            },
+          });
+
+          map.current?.addLayer({
+            id: `${sourceId}-fill`,
+            type: "fill",
+            source: sourceId,
+            paint: {
+              "fill-color": zone.color,
+              "fill-opacity": zone.opacity,
+            },
+          });
+
+          map.current?.addLayer({
+            id: `${sourceId}-line`,
+            type: "line",
+            source: sourceId,
+            paint: {
+              "line-color": zone.color,
+              "line-width": 1.5,
+              "line-opacity": 0.4,
+              "line-dasharray": [3, 2],
+            },
+          });
+        });
       });
 
       addMarkersToMap();
