@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp } from "lucide-react";
 import { indiaEarthquakes, indiaStats } from "@/data/indiaEarthquakes";
+import { indiaBoundaryCoordinates, seismicZones } from "@/data/indiaBoundary";
 
 const getMagnitudeColor = (magnitude: number): string => {
   if (magnitude < 3) return "#22c55e";
