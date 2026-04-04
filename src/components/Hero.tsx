@@ -72,7 +72,7 @@ const Hero = () => {
             </Button>
             <Button variant="glass" size="xl" onClick={() => document.getElementById("alerts")?.scrollIntoView({ behavior: "smooth" })}>
               <AlertTriangle className="w-5 h-5" />
-              Get SMS Alerts
+              Get Alerts
             </Button>
           </div>
         </div>
