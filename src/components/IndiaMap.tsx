@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp } from "lucide-react";
+import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { indiaEarthquakes, indiaStats } from "@/data/indiaEarthquakes";
 import { indiaBoundaryCoordinates, seismicZones } from "@/data/indiaBoundary";
+import EarthquakeSidebar from "./EarthquakeSidebar";
+import TimeSlider from "./TimeSlider";
+import type { Earthquake } from "@/data/indiaEarthquakes";
 
 const getMagnitudeColor = (magnitude: number): string => {
   if (magnitude < 3) return "#22c55e";
@@ -14,29 +18,76 @@ const getMagnitudeColor = (magnitude: number): string => {
   return "#dc2626";
 };
 
-const getTimeAgo = (date: Date): string => {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 365) return `${days}d ago`;
-  const years = Math.floor(days / 365);
-  return `${years}y ago`;
+const getMagnitudeRadius = (magnitude: number): number => {
+  return Math.max(6, Math.min(30, magnitude * 5));
 };
 
 const IndiaMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Filter state
+  const [magnitudeRange, setMagnitudeRange] = useState<[number, number]>([0, 10]);
+  const [yearRange, setYearRange] = useState<[number, number]>([1897, 2026]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEqId, setSelectedEqId] = useState<string | null>(null);
+
+  // Time slider state
+  const [timeSliderYear, setTimeSliderYear] = useState(2026);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const earthquakes = indiaEarthquakes;
   const stats = indiaStats;
+
+  const minYear = useMemo(
+    () => Math.min(...earthquakes.map((e) => new Date(e.time).getFullYear())),
+    [earthquakes]
+  );
+  const maxYear = useMemo(
+    () => Math.max(...earthquakes.map((e) => new Date(e.time).getFullYear())),
+    [earthquakes]
+  );
+
+  // Filtered earthquakes
+  const filteredEarthquakes = useMemo(() => {
+    return earthquakes.filter((eq) => {
+      const year = new Date(eq.time).getFullYear();
+      const matchesMag = eq.magnitude >= magnitudeRange[0] && eq.magnitude <= magnitudeRange[1];
+      const matchesYear = year >= yearRange[0] && year <= yearRange[1];
+      const matchesSearch =
+        !searchQuery ||
+        eq.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        eq.state.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        eq.region.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesTimeSlider = year <= timeSliderYear;
+      return matchesMag && matchesYear && matchesSearch && matchesTimeSlider;
+    });
+  }, [earthquakes, magnitudeRange, yearRange, searchQuery, timeSliderYear]);
+
+  // Time slider animation
+  useEffect(() => {
+    if (isPlaying) {
+      playIntervalRef.current = setInterval(() => {
+        setTimeSliderYear((prev) => {
+          if (prev >= maxYear) {
+            setIsPlaying(false);
+            return maxYear;
+          }
+          return prev + 1;
+        });
+      }, 500);
+    }
+    return () => {
+      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
+    };
+  }, [isPlaying, maxYear]);
 
   const fetchMapboxToken = async () => {
     try {
@@ -51,48 +102,128 @@ const IndiaMap = () => {
 
   const addMarkersToMap = useCallback(() => {
     if (!map.current) return;
-    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
-    earthquakes.forEach((quake) => {
-      const el = document.createElement("div");
-      const size = Math.max(20, Math.min(50, quake.magnitude * 8));
-      el.style.width = `${size}px`;
-      el.style.height = `${size}px`;
-      el.style.backgroundColor = getMagnitudeColor(quake.magnitude);
-      el.style.borderRadius = "50%";
-      el.style.border = "2px solid white";
-      el.style.boxShadow = `0 0 ${size / 2}px ${getMagnitudeColor(quake.magnitude)}`;
-      el.style.cursor = "pointer";
+    // Simple clustering: group nearby quakes when zoomed out
+    const zoom = map.current.getZoom();
+    const shouldCluster = zoom < 5;
 
-      const timeAgo = getTimeAgo(new Date(quake.time));
-      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
-        <div style="padding: 12px; color: #1a1a2e; min-width: 200px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="background: ${getMagnitudeColor(quake.magnitude)}; color: white; font-weight: bold; padding: 4px 8px; border-radius: 6px; font-size: 14px;">
-              M ${quake.magnitude.toFixed(1)}
-            </span>
+    if (shouldCluster) {
+      // Group by region for clustering
+      const clusters: Record<string, { quakes: Earthquake[]; lat: number; lng: number }> = {};
+      filteredEarthquakes.forEach((eq) => {
+        const key = eq.region;
+        if (!clusters[key]) {
+          clusters[key] = { quakes: [], lat: 0, lng: 0 };
+        }
+        clusters[key].quakes.push(eq);
+        clusters[key].lat += eq.coordinates.lat;
+        clusters[key].lng += eq.coordinates.lng;
+      });
+
+      Object.entries(clusters).forEach(([region, cluster]) => {
+        const count = cluster.quakes.length;
+        const avgLat = cluster.lat / count;
+        const avgLng = cluster.lng / count;
+        const maxMag = Math.max(...cluster.quakes.map((q) => q.magnitude));
+        const size = Math.max(40, Math.min(70, count * 10 + 30));
+
+        const el = document.createElement("div");
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+        el.style.backgroundColor = getMagnitudeColor(maxMag);
+        el.style.borderRadius = "50%";
+        el.style.border = "3px solid rgba(255,255,255,0.3)";
+        el.style.display = "flex";
+        el.style.alignItems = "center";
+        el.style.justifyContent = "center";
+        el.style.color = "white";
+        el.style.fontWeight = "bold";
+        el.style.fontSize = "14px";
+        el.style.cursor = "pointer";
+        el.style.boxShadow = `0 0 ${size / 2}px ${getMagnitudeColor(maxMag)}80`;
+        el.textContent = String(count);
+
+        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+          <div style="padding: 12px; color: #1a1a2e; min-width: 180px;">
+            <h3 style="font-weight: 700; font-size: 14px; margin-bottom: 6px;">${region}</h3>
+            <p style="font-size: 12px; color: #666;">${count} earthquakes</p>
+            <p style="font-size: 12px; color: #666;">Max magnitude: M${maxMag.toFixed(1)}</p>
+            <p style="font-size: 11px; color: #888; margin-top: 4px;">Zoom in to see individual events</p>
           </div>
-          <h3 style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${quake.location}</h3>
-          <p style="font-size: 12px; color: #666; margin-bottom: 4px;">
-            📍 ${quake.state} | 🌊 Depth: ${quake.depth.toFixed(1)} km
-          </p>
-          <p style="font-size: 11px; color: #888;">🕐 ${timeAgo}</p>
-          <p style="font-size: 10px; color: #aaa; margin-top: 4px;">
-            ${new Date(quake.time).toLocaleString("en-IN")}
-          </p>
-        </div>
-      `);
+        `);
 
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([quake.coordinates.lng, quake.coordinates.lat])
-        .setPopup(popup)
-        .addTo(map.current!);
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([avgLng, avgLat])
+          .setPopup(popup)
+          .addTo(map.current!);
+        markersRef.current.push(marker);
+      });
+    } else {
+      // Individual markers
+      filteredEarthquakes.forEach((quake) => {
+        const radius = getMagnitudeRadius(quake.magnitude);
+        const el = document.createElement("div");
+        el.style.width = `${radius * 2}px`;
+        el.style.height = `${radius * 2}px`;
+        el.style.backgroundColor = getMagnitudeColor(quake.magnitude);
+        el.style.borderRadius = "50%";
+        el.style.border = "2px solid rgba(255,255,255,0.5)";
+        el.style.boxShadow = `0 0 ${radius}px ${getMagnitudeColor(quake.magnitude)}80`;
+        el.style.cursor = "pointer";
+        el.style.transition = "transform 0.2s";
 
-      markersRef.current.push(marker);
-    });
+        el.addEventListener("mouseenter", () => {
+          el.style.transform = "scale(1.3)";
+          el.style.zIndex = "10";
+        });
+        el.addEventListener("mouseleave", () => {
+          el.style.transform = "scale(1)";
+          el.style.zIndex = "auto";
+        });
+
+        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+          <div style="padding: 12px; color: #1a1a2e; min-width: 220px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="background: ${getMagnitudeColor(quake.magnitude)}; color: white; font-weight: bold; padding: 4px 10px; border-radius: 6px; font-size: 14px;">
+                M ${quake.magnitude.toFixed(1)}
+              </span>
+              ${quake.isHistorical ? '<span style="background:#6b7280;color:white;padding:2px 6px;border-radius:4px;font-size:10px;">Historical</span>' : ""}
+            </div>
+            <h3 style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${quake.location}</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 2px;">
+              📍 ${quake.state} • ${quake.region}
+            </p>
+            <p style="font-size: 12px; color: #666; margin-bottom: 2px;">
+              🌊 Depth: ${quake.depth.toFixed(1)} km
+            </p>
+            <p style="font-size: 12px; color: #666;">
+              📐 ${quake.coordinates.lat.toFixed(2)}°N, ${quake.coordinates.lng.toFixed(2)}°E
+            </p>
+            <p style="font-size: 11px; color: #888; margin-top: 6px; border-top: 1px solid #eee; padding-top: 6px;">
+              🕐 ${new Date(quake.time).toLocaleString("en-IN", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+        `);
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([quake.coordinates.lng, quake.coordinates.lat])
+          .setPopup(popup)
+          .addTo(map.current!);
+
+        markersRef.current.push(marker);
+      });
+    }
     setLoading(false);
-  }, [earthquakes]);
+  }, [filteredEarthquakes]);
+
+  // Re-render markers on filter/zoom change
+  useEffect(() => {
+    if (map.current && mapboxToken) {
+      addMarkersToMap();
+    }
+  }, [addMarkersToMap]);
 
   useEffect(() => {
     fetchMapboxToken();
@@ -109,21 +240,19 @@ const IndiaMap = () => {
       center: [82.8, 22.5],
       zoom: 4.2,
       pitch: 30,
+      maxBounds: [[60, 5], [100, 40]],
     });
 
     map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
 
     map.current.on("load", () => {
-      // Add proper India boundary outline
+      // India boundary
       map.current?.addSource("india-boundary", {
         type: "geojson",
         data: {
           type: "Feature",
           properties: {},
-          geometry: {
-            type: "Polygon",
-            coordinates: [indiaBoundaryCoordinates],
-          },
+          geometry: { type: "Polygon", coordinates: [indiaBoundaryCoordinates] },
         },
       });
 
@@ -131,24 +260,17 @@ const IndiaMap = () => {
         id: "india-boundary-fill",
         type: "fill",
         source: "india-boundary",
-        paint: {
-          "fill-color": "hsl(var(--primary))",
-          "fill-opacity": 0.05,
-        },
+        paint: { "fill-color": "hsl(24, 95%, 53%)", "fill-opacity": 0.05 },
       });
 
       map.current?.addLayer({
         id: "india-boundary-line",
         type: "line",
         source: "india-boundary",
-        paint: {
-          "line-color": "hsl(var(--primary))",
-          "line-width": 2,
-          "line-opacity": 0.6,
-        },
+        paint: { "line-color": "hsl(24, 95%, 53%)", "line-width": 2, "line-opacity": 0.6 },
       });
 
-      // Add seismic zone hotspots
+      // Seismic zones
       seismicZones.forEach((zone, index) => {
         zone.coordinates.forEach((coords, ci) => {
           const sourceId = `seismic-zone-${index}-${ci}`;
@@ -157,23 +279,15 @@ const IndiaMap = () => {
             data: {
               type: "Feature",
               properties: { name: zone.name },
-              geometry: {
-                type: "Polygon",
-                coordinates: [coords],
-              },
+              geometry: { type: "Polygon", coordinates: [coords] },
             },
           });
-
           map.current?.addLayer({
             id: `${sourceId}-fill`,
             type: "fill",
             source: sourceId,
-            paint: {
-              "fill-color": zone.color,
-              "fill-opacity": zone.opacity,
-            },
+            paint: { "fill-color": zone.color, "fill-opacity": zone.opacity },
           });
-
           map.current?.addLayer({
             id: `${sourceId}-line`,
             type: "line",
@@ -191,11 +305,36 @@ const IndiaMap = () => {
       addMarkersToMap();
     });
 
+    // Re-cluster on zoom change
+    map.current.on("zoomend", () => {
+      addMarkersToMap();
+    });
+
     return () => {
       markersRef.current.forEach((m) => m.remove());
       map.current?.remove();
     };
-  }, [mapboxToken, addMarkersToMap]);
+  }, [mapboxToken]);
+
+  const handleEarthquakeClick = (eq: Earthquake) => {
+    setSelectedEqId(eq.id);
+    if (map.current) {
+      map.current.flyTo({
+        center: [eq.coordinates.lng, eq.coordinates.lat],
+        zoom: 7,
+        duration: 1000,
+      });
+    }
+  };
+
+  const handlePlayToggle = () => {
+    if (!isPlaying) {
+      if (timeSliderYear >= maxYear) setTimeSliderYear(minYear);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(false);
+    }
+  };
 
   const topStates = Object.entries(stats.byState)
     .sort(([, a], [, b]) => b - a)
@@ -212,74 +351,120 @@ const IndiaMap = () => {
               India Seismic Activity Map
             </h2>
             <p className="text-muted-foreground">
-              Notable earthquake events across India
+              Interactive earthquake visualization with filtering, clustering & time animation
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:hidden"
+          >
+            {sidebarOpen ? <PanelLeftClose className="w-4 h-4 mr-2" /> : <PanelLeftOpen className="w-4 h-4 mr-2" />}
+            {sidebarOpen ? "Hide List" : "Show List"}
+          </Button>
         </div>
 
+        {/* Map + Sidebar Layout */}
         <div className="relative rounded-2xl overflow-hidden border border-border/50 shadow-card">
-          <div ref={mapContainer} className="w-full h-[500px] md:h-[600px]" />
-
-          {loading && (
-            <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-              <div className="text-center">
-                <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
-                <p className="text-muted-foreground">Loading map...</p>
-              </div>
+          <div className="flex flex-col md:flex-row" style={{ height: "650px" }}>
+            {/* Sidebar */}
+            <div
+              className={`${
+                sidebarOpen ? "w-full md:w-[340px]" : "w-0"
+              } transition-all duration-300 overflow-hidden shrink-0 h-full`}
+            >
+              <EarthquakeSidebar
+                earthquakes={earthquakes}
+                filteredEarthquakes={filteredEarthquakes}
+                magnitudeRange={magnitudeRange}
+                onMagnitudeRangeChange={setMagnitudeRange}
+                yearRange={yearRange}
+                onYearRangeChange={setYearRange}
+                onEarthquakeClick={handleEarthquakeClick}
+                selectedId={selectedEqId}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+              />
             </div>
-          )}
 
-          {error && (
-            <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-              <div className="text-center">
-                <AlertTriangle className="w-8 h-8 text-seismic-severe mx-auto mb-2" />
-                <p className="text-muted-foreground">{error}</p>
-              </div>
-            </div>
-          )}
+            {/* Map */}
+            <div className="flex-1 relative h-full">
+              <div ref={mapContainer} className="w-full h-full" />
 
-          {/* Legend */}
-          <div className="absolute bottom-4 left-4 glass-card rounded-lg p-4">
-            <p className="text-xs font-semibold text-foreground mb-2">Magnitude Scale</p>
-            <div className="flex gap-2">
-              {[
-                { color: "bg-seismic-low", label: "<3" },
-                { color: "bg-seismic-moderate", label: "3-5" },
-                { color: "bg-seismic-high", label: "5-6" },
-                { color: "bg-seismic-severe", label: "6-7" },
-                { color: "bg-seismic-extreme", label: "7+" },
-              ].map((item, i) => (
-                <div key={i} className="flex flex-col items-center gap-1">
-                  <span className={`w-3 h-3 rounded-full ${item.color}`}></span>
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
+              {/* Sidebar toggle (desktop) */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="absolute top-4 left-4 z-10 hidden md:flex glass-card h-9 w-9"
+              >
+                {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+              </Button>
+
+              {loading && (
+                <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
+                    <p className="text-muted-foreground">Loading map...</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Stats overlay */}
-          <div className="absolute top-4 left-4 glass-card rounded-lg p-4 min-w-[180px]">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="w-4 h-4 text-primary" />
-              <p className="text-xs font-semibold text-foreground">Data Summary</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-2xl font-bold text-primary font-mono">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total Events</p>
+              {error && (
+                <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                  <div className="text-center">
+                    <AlertTriangle className="w-8 h-8 text-seismic-severe mx-auto mb-2" />
+                    <p className="text-muted-foreground">{error}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Legend */}
+              <div className="absolute bottom-16 left-4 glass-card rounded-lg p-3">
+                <p className="text-xs font-semibold text-foreground mb-2">Magnitude</p>
+                <div className="flex gap-2">
+                  {[
+                    { color: "bg-seismic-low", label: "<3" },
+                    { color: "bg-seismic-moderate", label: "3-5" },
+                    { color: "bg-seismic-high", label: "5-6" },
+                    { color: "bg-seismic-severe", label: "6-7" },
+                    { color: "bg-seismic-extreme", label: "7+" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <span className={`w-3 h-3 rounded-full ${item.color}`}></span>
+                      <span className="text-[10px] text-muted-foreground">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-seismic-moderate font-mono">{stats.maxMagnitude}</p>
-                <p className="text-xs text-muted-foreground">Max Mag</p>
+
+              {/* Stats overlay */}
+              <div className="absolute top-4 right-16 glass-card rounded-lg p-3 min-w-[140px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <Activity className="w-3 h-3 text-primary" />
+                  <p className="text-xs font-semibold text-foreground">Showing</p>
+                </div>
+                <p className="text-xl font-bold text-primary font-mono">{filteredEarthquakes.length}</p>
+                <p className="text-xs text-muted-foreground">of {earthquakes.length} events</p>
               </div>
-            </div>
-            <div className="mt-3 pt-3 border-t border-border/30">
-              <p className="text-xs text-muted-foreground">Avg: M{stats.avgMagnitude}</p>
+
+              {/* Time Slider */}
+              <div className="absolute bottom-4 left-4 right-4">
+                <TimeSlider
+                  minYear={minYear}
+                  maxYear={maxYear}
+                  currentYear={timeSliderYear}
+                  onYearChange={setTimeSliderYear}
+                  isPlaying={isPlaying}
+                  onPlayToggle={handlePlayToggle}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Data Analysis Section */}
+        {/* Data Analysis */}
         <div className="mt-8 grid md:grid-cols-2 gap-6">
           <div className="glass-card rounded-xl p-6">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
@@ -316,46 +501,15 @@ const IndiaMap = () => {
               {Object.entries(stats.byRegion)
                 .sort(([, a], [, b]) => b - a)
                 .map(([region, count]) => (
-                  <div key={region} className="flex justify-between items-center py-2 border-b border-border/20 last:border-0">
+                  <div
+                    key={region}
+                    className="flex justify-between items-center py-2 border-b border-border/20 last:border-0"
+                  >
                     <span className="text-sm text-foreground">{region}</span>
                     <span className="text-sm font-mono font-semibold text-primary">{count}</span>
                   </div>
                 ))}
             </div>
-          </div>
-        </div>
-
-        {/* Recent Events List */}
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Activity className="w-5 h-5 text-primary" />
-            Seismic Events
-          </h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {earthquakes.slice(0, 6).map((quake) => (
-              <div key={quake.id} className="glass-card rounded-xl p-4 hover:bg-card/80 transition-all">
-                <div className="flex items-start gap-4">
-                  <div
-                    className="w-14 h-14 rounded-lg flex flex-col items-center justify-center font-bold text-white shrink-0"
-                    style={{ backgroundColor: getMagnitudeColor(quake.magnitude) }}
-                  >
-                    <span className="text-lg">{quake.magnitude.toFixed(1)}</span>
-                    <span className="text-[10px] opacity-80">MAG</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-foreground truncate">{quake.state}</h4>
-                    <p className="text-sm text-muted-foreground truncate">{quake.location}</p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {new Date(quake.time).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })}
-                      </span>
-                      <span>Depth: {quake.depth.toFixed(1)} km</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
