@@ -41,7 +41,7 @@ const IndiaMap = () => {
   // Time slider state
   const [timeSliderYear, setTimeSliderYear] = useState(2026);
   const [isPlaying, setIsPlaying] = useState(false);
-  const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const earthquakes = indiaEarthquakes;
   const stats = indiaStats;
