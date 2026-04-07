@@ -439,6 +439,18 @@ const IndiaMap = () => {
                 </div>
                 <p className="text-xl font-bold text-primary font-mono">{filteredEarthquakes.length}</p>
                 <p className="text-xs text-muted-foreground">of {earthquakes.length} events</p>
+                <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30">
+                  {liveLoading ? (
+                    <Badge variant="outline" className="text-[10px] gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" />Loading live...</Badge>
+                  ) : liveError ? (
+                    <Badge variant="destructive" className="text-[10px]">Offline</Badge>
+                  ) : liveEarthquakes.length > 0 ? (
+                    <Badge variant="secondary" className="text-[10px] gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />+{liveEarthquakes.length} live</Badge>
+                  ) : null}
+                  <Button variant="ghost" size="icon" className="h-5 w-5 ml-auto" onClick={fetchLiveData} disabled={liveLoading}>
+                    <RefreshCw className={`w-3 h-3 ${liveLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </div>
 
               {/* Time Slider */}
