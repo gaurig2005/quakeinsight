@@ -41,8 +41,50 @@ const IndiaMap = () => {
   const [mapStyle, setMapStyle] = useState<"roadmap" | "satellite" | "terrain">("roadmap");
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const earthquakes = indiaEarthquakes;
-  const stats = indiaStats;
+  const [liveEarthquakes, setLiveEarthquakes] = useState<Earthquake[]>([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
+
+  // Merge static CSV data with live USGS data
+  const earthquakes = useMemo(() => {
+    const staticIds = new Set(indiaEarthquakes.map(e => e.id));
+    const uniqueLive = liveEarthquakes.filter(e => !staticIds.has(e.id));
+    return [...indiaEarthquakes, ...uniqueLive];
+  }, [liveEarthquakes]);
+
+  const stats = useMemo(() => ({
+    total: earthquakes.length,
+    avgMagnitude: (earthquakes.reduce((s, e) => s + e.magnitude, 0) / earthquakes.length).toFixed(1),
+    maxMagnitude: Math.max(...earthquakes.map(e => e.magnitude)),
+    byState: earthquakes.reduce((acc, e) => { acc[e.state] = (acc[e.state] || 0) + 1; return acc; }, {} as Record<string, number>),
+    byRegion: earthquakes.reduce((acc, e) => { acc[e.region] = (acc[e.region] || 0) + 1; return acc; }, {} as Record<string, number>),
+    byDecade: earthquakes.reduce((acc, e) => { const d = Math.floor(new Date(e.time).getFullYear() / 10) * 10; acc[`${d}s`] = (acc[`${d}s`] || 0) + 1; return acc; }, {} as Record<string, number>),
+  }), [earthquakes]);
+
+  // Fetch live USGS data via edge function
+  const fetchLiveData = useCallback(async () => {
+    setLiveLoading(true);
+    setLiveError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-earthquakes", {
+        body: null,
+      });
+      if (error) throw error;
+      if (data?.earthquakes) {
+        setLiveEarthquakes(data.earthquakes);
+        console.log(`Fetched ${data.earthquakes.length} live earthquakes from USGS`);
+      }
+    } catch (err: any) {
+      console.error("Live USGS fetch failed:", err);
+      setLiveError("Live data unavailable");
+    } finally {
+      setLiveLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLiveData();
+  }, [fetchLiveData]);
 
   const minYear = useMemo(
     () => Math.min(...earthquakes.map((e) => new Date(e.time).getFullYear())),
