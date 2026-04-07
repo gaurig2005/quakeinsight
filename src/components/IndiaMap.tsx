@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose, Map, Satellite, Mountain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { indiaEarthquakes, indiaStats } from "@/data/indiaEarthquakes";
 import { indiaBoundaryCoordinates, seismicZones } from "@/data/indiaBoundary";
@@ -36,6 +36,8 @@ const IndiaMap = () => {
   const [timeSliderYear, setTimeSliderYear] = useState(2026);
   const [isPlaying, setIsPlaying] = useState(false);
   const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [mapStyle, setMapStyle] = useState<"roadmap" | "satellite" | "terrain">("roadmap");
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   const earthquakes = indiaEarthquakes;
   const stats = indiaStats;
@@ -96,12 +98,12 @@ const IndiaMap = () => {
 
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    // Dark tile layer (free, no API key)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: "abcd",
+    // Default roadmap tile layer
+    const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map);
+    tileLayerRef.current = tileLayer;
 
     // India boundary
     const boundaryLatLngs = indiaBoundaryCoordinates.map(
