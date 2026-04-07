@@ -359,6 +359,7 @@ const IndiaMap = () => {
                 ))}
               </div>
 
+              {loading && (
                 <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-[1000]">
                   <div className="text-center">
                     <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
