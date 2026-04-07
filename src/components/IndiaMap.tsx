@@ -518,7 +518,8 @@ const IndiaMap = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          Data: National Center for Seismology (NCS), India & USGS • India region only
+          Data: USGS Earthquake Catalog • Region: South Asia (4.5°N–36.2°N, 66.8°E–94.1°E) • {indiaEarthquakes.length} historical + {liveEarthquakes.length} live events
+        </p>
         </p>
       </div>
     </section>
