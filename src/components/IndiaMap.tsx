@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose, Map, Satellite, Mountain } from "lucide-react";
+import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose, Map, Satellite, Mountain, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { indiaEarthquakes, indiaStats } from "@/data/indiaEarthquakes";
 import { indiaBoundaryCoordinates, seismicZones } from "@/data/indiaBoundary";
 import EarthquakeSidebar from "./EarthquakeSidebar";
 import TimeSlider from "./TimeSlider";
 import type { Earthquake } from "@/data/indiaEarthquakes";
+import { supabase } from "@/integrations/supabase/client";
 
 const getMagnitudeColor = (magnitude: number): string => {
   if (magnitude < 3) return "#22c55e";
