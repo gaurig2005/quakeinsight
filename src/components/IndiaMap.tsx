@@ -232,6 +232,37 @@ const IndiaMap = () => {
     return () => { mapRef.current?.off("zoomend", handler); };
   }, []);
 
+  // Switch tile layers when mapStyle changes
+  useEffect(() => {
+    if (!mapRef.current || !tileLayerRef.current) return;
+
+    const tileSources: Record<string, { url: string; attribution: string; maxZoom: number }> = {
+      roadmap: {
+        url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+      },
+      satellite: {
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+        maxZoom: 18,
+      },
+      terrain: {
+        url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+        maxZoom: 17,
+      },
+    };
+
+    const source = tileSources[mapStyle];
+    mapRef.current.removeLayer(tileLayerRef.current);
+    const newLayer = L.tileLayer(source.url, {
+      attribution: source.attribution,
+      maxZoom: source.maxZoom,
+    }).addTo(mapRef.current);
+    tileLayerRef.current = newLayer;
+  }, [mapStyle]);
+
   const handleEarthquakeClick = (eq: Earthquake) => {
     setSelectedEqId(eq.id);
     if (mapRef.current) {
