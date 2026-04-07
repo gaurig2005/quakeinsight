@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose, Map, Satellite, Mountain } from "lucide-react";
+import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose, Map, Satellite, Mountain, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { indiaEarthquakes, indiaStats } from "@/data/indiaEarthquakes";
 import { indiaBoundaryCoordinates, seismicZones } from "@/data/indiaBoundary";
 import EarthquakeSidebar from "./EarthquakeSidebar";
 import TimeSlider from "./TimeSlider";
 import type { Earthquake } from "@/data/indiaEarthquakes";
+import { supabase } from "@/integrations/supabase/client";
 
 const getMagnitudeColor = (magnitude: number): string => {
   if (magnitude < 3) return "#22c55e";
@@ -39,8 +41,50 @@ const IndiaMap = () => {
   const [mapStyle, setMapStyle] = useState<"roadmap" | "satellite" | "terrain">("roadmap");
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const earthquakes = indiaEarthquakes;
-  const stats = indiaStats;
+  const [liveEarthquakes, setLiveEarthquakes] = useState<Earthquake[]>([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
+
+  // Merge static CSV data with live USGS data
+  const earthquakes = useMemo(() => {
+    const staticIds = new Set(indiaEarthquakes.map(e => e.id));
+    const uniqueLive = liveEarthquakes.filter(e => !staticIds.has(e.id));
+    return [...indiaEarthquakes, ...uniqueLive];
+  }, [liveEarthquakes]);
+
+  const stats = useMemo(() => ({
+    total: earthquakes.length,
+    avgMagnitude: (earthquakes.reduce((s, e) => s + e.magnitude, 0) / earthquakes.length).toFixed(1),
+    maxMagnitude: Math.max(...earthquakes.map(e => e.magnitude)),
+    byState: earthquakes.reduce((acc, e) => { acc[e.state] = (acc[e.state] || 0) + 1; return acc; }, {} as Record<string, number>),
+    byRegion: earthquakes.reduce((acc, e) => { acc[e.region] = (acc[e.region] || 0) + 1; return acc; }, {} as Record<string, number>),
+    byDecade: earthquakes.reduce((acc, e) => { const d = Math.floor(new Date(e.time).getFullYear() / 10) * 10; acc[`${d}s`] = (acc[`${d}s`] || 0) + 1; return acc; }, {} as Record<string, number>),
+  }), [earthquakes]);
+
+  // Fetch live USGS data via edge function
+  const fetchLiveData = useCallback(async () => {
+    setLiveLoading(true);
+    setLiveError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-earthquakes", {
+        body: null,
+      });
+      if (error) throw error;
+      if (data?.earthquakes) {
+        setLiveEarthquakes(data.earthquakes);
+        console.log(`Fetched ${data.earthquakes.length} live earthquakes from USGS`);
+      }
+    } catch (err: any) {
+      console.error("Live USGS fetch failed:", err);
+      setLiveError("Live data unavailable");
+    } finally {
+      setLiveLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLiveData();
+  }, [fetchLiveData]);
 
   const minYear = useMemo(
     () => Math.min(...earthquakes.map((e) => new Date(e.time).getFullYear())),
@@ -395,6 +439,18 @@ const IndiaMap = () => {
                 </div>
                 <p className="text-xl font-bold text-primary font-mono">{filteredEarthquakes.length}</p>
                 <p className="text-xs text-muted-foreground">of {earthquakes.length} events</p>
+                <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30">
+                  {liveLoading ? (
+                    <Badge variant="outline" className="text-[10px] gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" />Loading live...</Badge>
+                  ) : liveError ? (
+                    <Badge variant="destructive" className="text-[10px]">Offline</Badge>
+                  ) : liveEarthquakes.length > 0 ? (
+                    <Badge variant="secondary" className="text-[10px] gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />+{liveEarthquakes.length} live</Badge>
+                  ) : null}
+                  <Button variant="ghost" size="icon" className="h-5 w-5 ml-auto" onClick={fetchLiveData} disabled={liveLoading}>
+                    <RefreshCw className={`w-3 h-3 ${liveLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </div>
 
               {/* Time Slider */}
@@ -462,7 +518,7 @@ const IndiaMap = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          Data: National Center for Seismology (NCS), India & USGS • India region only
+          Data: USGS Earthquake Catalog • Region: South Asia (4.5°N–36.2°N, 66.8°E–94.1°E) • {indiaEarthquakes.length} historical + {liveEarthquakes.length} live events
         </p>
       </div>
     </section>
