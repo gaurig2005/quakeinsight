@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { Loader2, AlertTriangle, Activity, Clock, MapPin, TrendingUp, PanelLeftOpen, PanelLeftClose, Map, Satellite, Mountain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { indiaEarthquakes, indiaStats } from "@/data/indiaEarthquakes";
 import { indiaBoundaryCoordinates, seismicZones } from "@/data/indiaBoundary";
@@ -36,6 +36,8 @@ const IndiaMap = () => {
   const [timeSliderYear, setTimeSliderYear] = useState(2026);
   const [isPlaying, setIsPlaying] = useState(false);
   const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [mapStyle, setMapStyle] = useState<"roadmap" | "satellite" | "terrain">("roadmap");
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   const earthquakes = indiaEarthquakes;
   const stats = indiaStats;
@@ -96,12 +98,12 @@ const IndiaMap = () => {
 
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    // Dark tile layer (free, no API key)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: "abcd",
+    // Default roadmap tile layer
+    const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map);
+    tileLayerRef.current = tileLayer;
 
     // India boundary
     const boundaryLatLngs = indiaBoundaryCoordinates.map(
@@ -230,6 +232,37 @@ const IndiaMap = () => {
     return () => { mapRef.current?.off("zoomend", handler); };
   }, []);
 
+  // Switch tile layers when mapStyle changes
+  useEffect(() => {
+    if (!mapRef.current || !tileLayerRef.current) return;
+
+    const tileSources: Record<string, { url: string; attribution: string; maxZoom: number }> = {
+      roadmap: {
+        url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+      },
+      satellite: {
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+        maxZoom: 18,
+      },
+      terrain: {
+        url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+        maxZoom: 17,
+      },
+    };
+
+    const source = tileSources[mapStyle];
+    mapRef.current.removeLayer(tileLayerRef.current);
+    const newLayer = L.tileLayer(source.url, {
+      attribution: source.attribution,
+      maxZoom: source.maxZoom,
+    }).addTo(mapRef.current);
+    tileLayerRef.current = newLayer;
+  }, [mapStyle]);
+
   const handleEarthquakeClick = (eq: Earthquake) => {
     setSelectedEqId(eq.id);
     if (mapRef.current) {
@@ -305,6 +338,26 @@ const IndiaMap = () => {
               >
                 {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
               </Button>
+
+              {/* Map Style Switcher */}
+              <div className="absolute top-4 left-16 z-[1000] flex gap-1 glass-card rounded-lg p-1">
+                {[
+                  { id: "roadmap" as const, icon: Map, label: "Default" },
+                  { id: "satellite" as const, icon: Satellite, label: "Satellite" },
+                  { id: "terrain" as const, icon: Mountain, label: "Terrain" },
+                ].map((style) => (
+                  <Button
+                    key={style.id}
+                    variant={mapStyle === style.id ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setMapStyle(style.id)}
+                    className={`h-8 px-2.5 text-xs gap-1.5 ${mapStyle === style.id ? "bg-primary text-primary-foreground" : ""}`}
+                  >
+                    <style.icon className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{style.label}</span>
+                  </Button>
+                ))}
+              </div>
 
               {loading && (
                 <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-[1000]">
