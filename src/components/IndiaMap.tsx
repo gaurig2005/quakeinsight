@@ -339,7 +339,26 @@ const IndiaMap = () => {
                 {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
               </Button>
 
-              {loading && (
+              {/* Map Style Switcher */}
+              <div className="absolute top-4 left-16 z-[1000] flex gap-1 glass-card rounded-lg p-1">
+                {[
+                  { id: "roadmap" as const, icon: Map, label: "Default" },
+                  { id: "satellite" as const, icon: Satellite, label: "Satellite" },
+                  { id: "terrain" as const, icon: Mountain, label: "Terrain" },
+                ].map((style) => (
+                  <Button
+                    key={style.id}
+                    variant={mapStyle === style.id ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setMapStyle(style.id)}
+                    className={`h-8 px-2.5 text-xs gap-1.5 ${mapStyle === style.id ? "bg-primary text-primary-foreground" : ""}`}
+                  >
+                    <style.icon className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{style.label}</span>
+                  </Button>
+                ))}
+              </div>
+
                 <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-[1000]">
                   <div className="text-center">
                     <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
