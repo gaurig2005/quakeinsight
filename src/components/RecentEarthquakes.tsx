@@ -1,5 +1,6 @@
 import { AlertTriangle, MapPin, ArrowUpRight } from "lucide-react";
-import { recentIndiaEarthquakes } from "@/data/indiaEarthquakes";
+import { indiaEarthquakes } from "@/data/indiaEarthquakes";
+import { useMemo } from "react";
 
 const getMagnitudeClass = (magnitude: number) => {
   if (magnitude < 3) return "magnitude-low";
@@ -18,7 +19,12 @@ const getMagnitudeLabel = (magnitude: number) => {
 };
 
 const RecentEarthquakes = () => {
-  const quakes = recentIndiaEarthquakes.slice(0, 5);
+  const quakes = useMemo(() => 
+    [...indiaEarthquakes]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 5),
+    []
+  );
 
   return (
     <section id="dashboard" className="py-20 bg-gradient-dark">
@@ -26,10 +32,10 @@ const RecentEarthquakes = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Recent Seismic Activity — India
+              Recent Seismic Activity
             </h2>
             <p className="text-muted-foreground">
-              Earthquake data from Indian seismic monitoring stations
+              Latest earthquake data from USGS (1975–2026)
             </p>
           </div>
         </div>
@@ -57,7 +63,7 @@ const RecentEarthquakes = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                        {quake.location}, {quake.state}
+                        {quake.location}
                         {quake.magnitude >= 6 && (
                           <AlertTriangle className="w-4 h-4 text-seismic-severe animate-pulse" />
                         )}
@@ -67,7 +73,7 @@ const RecentEarthquakes = () => {
                           <MapPin className="w-3 h-3" />
                           {quake.coordinates.lat.toFixed(3)}°, {quake.coordinates.lng.toFixed(3)}°
                         </span>
-                        <span>Depth: {quake.depth} km</span>
+                        <span>Depth: {quake.depth.toFixed(0)} km</span>
                         <span>{new Date(quake.time).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })}</span>
                       </div>
                     </div>
