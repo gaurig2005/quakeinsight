@@ -527,7 +527,7 @@ const IndiaMap = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          Data: USGS Earthquake Catalog • Region: South Asia (4.5°N–36.2°N, 66.8°E–94.1°E) • {indiaEarthquakes.length} historical + {liveEarthquakes.length} live events
+          Data: USGS Earthquake Catalog (1975–2026) • Region: Lat [-1.1°, 36.4°] Lon [64.6°, 93.3°] • {indiaEarthquakes.length} historical + {liveEarthquakes.length} live events
         </p>
       </div>
     </section>
