@@ -1,11 +1,8 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from '@supabase/supabase-js/cors'
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
@@ -13,11 +10,11 @@ Deno.serve(async (req: Request) => {
     const days = parseInt(url.searchParams.get("days") || "30");
     const minMag = parseFloat(url.searchParams.get("minMagnitude") || "2.5");
 
-    // Bounding box: 36.194°N 66.826°E, 4.888°N 70.145°E, 4.473°N 94.068°E, 35.753°N 94.023°E
-    const minLat = 4.473;
-    const maxLat = 36.194;
-    const minLon = 66.826;
-    const maxLon = 94.068;
+    // Bounding box: lat [-1.143, 36.386], lon [64.6, 93.34]
+    const minLat = -1.143;
+    const maxLat = 36.386;
+    const minLon = 64.6;
+    const maxLon = 93.34;
 
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
@@ -27,10 +24,39 @@ Deno.serve(async (req: Request) => {
 
     const resp = await fetch(usgsUrl);
     if (!resp.ok) {
-      throw new Error(`USGS API error: ${resp.status} ${resp.statusText}`);
+      const text = await resp.text();
+      // Check if response is HTML (Cloudflare block)
+      if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+        console.error("USGS returned HTML (likely blocked). Returning empty.");
+        return new Response(JSON.stringify({
+          earthquakes: [],
+          count: 0,
+          source: "usgs_blocked",
+          fetchedAt: new Date().toISOString(),
+          message: "USGS API temporarily unavailable",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`USGS API error: ${resp.status}`);
     }
 
-    const usgsData = await resp.json();
+    const contentType = resp.headers.get("content-type") || "";
+    const text = await resp.text();
+    
+    if (!contentType.includes("json") || text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
+      console.error("USGS returned non-JSON response");
+      return new Response(JSON.stringify({
+        earthquakes: [],
+        count: 0,
+        source: "usgs_blocked",
+        fetchedAt: new Date().toISOString(),
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const usgsData = JSON.parse(text);
     const earthquakes = (usgsData.features || []).map((f: any) => {
       const [lng, lat, depth] = f.geometry.coordinates;
       const loc = f.properties.place || "Unknown";
@@ -48,7 +74,7 @@ Deno.serve(async (req: Request) => {
       };
     });
 
-    console.log(`Returning ${earthquakes.length} live earthquakes from USGS`);
+    console.log(`Returning ${earthquakes.length} live earthquakes`);
 
     return new Response(JSON.stringify({
       earthquakes,
@@ -70,17 +96,21 @@ Deno.serve(async (req: Request) => {
 function extractState(location: string): string {
   const loc = location.toLowerCase();
   const map: Record<string, string> = {
-    'andaman': 'Andaman & Nicobar', 'nicobar': 'Andaman & Nicobar', 'port blair': 'Andaman & Nicobar',
-    'bamboo flat': 'Andaman & Nicobar', 'manipur': 'Manipur', 'assam': 'Assam',
-    'meghalaya': 'Meghalaya', 'mizoram': 'Mizoram', 'nagaland': 'Nagaland',
-    'sikkim': 'Sikkim', 'arunachal': 'Arunachal Pradesh', 'himachal': 'Himachal Pradesh',
-    'chamba': 'Himachal Pradesh', 'uttarakhand': 'Uttarakhand', 'kashmir': 'Jammu & Kashmir',
-    'ladakh': 'Ladakh', 'delhi': 'Delhi', 'bihar': 'Bihar', 'gujarat': 'Gujarat',
-    'rajasthan': 'Rajasthan', 'maharashtra': 'Maharashtra', 'gyalshing': 'Sikkim',
+    'andaman': 'Andaman & Nicobar', 'nicobar': 'Andaman & Nicobar',
+    'manipur': 'Manipur', 'assam': 'Assam', 'meghalaya': 'Meghalaya',
+    'mizoram': 'Mizoram', 'nagaland': 'Nagaland', 'sikkim': 'Sikkim',
+    'gyalshing': 'Sikkim', 'arunachal': 'Arunachal Pradesh',
+    'himachal': 'Himachal Pradesh', 'chamba': 'Himachal Pradesh',
+    'uttarakhand': 'Uttarakhand', 'chamoli': 'Uttarakhand',
+    'kashmir': 'Jammu & Kashmir', 'ladakh': 'Ladakh',
+    'delhi': 'Delhi', 'bihar': 'Bihar', 'gujarat': 'Gujarat',
+    'rajasthan': 'Rajasthan', 'maharashtra': 'Maharashtra',
+    'karnataka': 'Karnataka', 'tamil nadu': 'Tamil Nadu', 'kerala': 'Kerala',
     'nepal': 'Nepal', 'pakistan': 'Pakistan', 'afghanistan': 'Afghanistan',
     'bangladesh': 'Bangladesh', 'myanmar': 'Myanmar', 'burma': 'Myanmar',
-    'china': 'China', 'tibet': 'China', 'indonesia': 'Indonesia',
-    'tajikistan': 'Tajikistan', 'bhutan': 'Bhutan',
+    'china': 'China', 'tibet': 'China', 'xizang': 'China',
+    'indonesia': 'Indonesia', 'tajikistan': 'Tajikistan', 'bhutan': 'Bhutan',
+    'sri lanka': 'Sri Lanka', 'iran': 'Iran',
   };
   for (const [key, val] of Object.entries(map)) {
     if (loc.includes(key)) return val;
@@ -99,6 +129,6 @@ function extractRegion(location: string): string {
   if (state === 'Andaman & Nicobar') return 'Andaman & Nicobar';
   if (['Gujarat', 'Rajasthan'].includes(state)) return 'Western India';
   if (['Maharashtra', 'Karnataka', 'Tamil Nadu', 'Kerala'].includes(state)) return 'Peninsular India';
-  if (['Afghanistan', 'Pakistan', 'Nepal', 'Bangladesh', 'Myanmar', 'China', 'Indonesia', 'Tajikistan', 'Bhutan'].includes(state)) return state;
+  if (['Afghanistan', 'Pakistan', 'Nepal', 'Bangladesh', 'Myanmar', 'China', 'Indonesia', 'Tajikistan', 'Bhutan', 'Sri Lanka', 'Iran'].includes(state)) return state;
   return 'India';
 }
