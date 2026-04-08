@@ -46,7 +46,6 @@ const PredictionSection = () => {
             <div className="grid sm:grid-cols-2 gap-4">
               {[
                 { icon: Cpu, label: t("prediction.neuralNetworks"), desc: t("prediction.neuralNetworksDesc") },
-                { icon: TrendingUp, label: t("prediction.accuracy"), desc: t("prediction.accuracyDesc") },
                 { icon: Shield, label: t("prediction.earlyWarning"), desc: t("prediction.earlyWarningDesc") },
                 { icon: Zap, label: t("prediction.realTime"), desc: t("prediction.realTimeDesc") },
               ].map((item, index) => (
