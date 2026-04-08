@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { indiaEarthquakes, indiaStats } from "@/data/indiaEarthquakes";
 import { indiaBoundaryCoordinates, seismicZones } from "@/data/indiaBoundary";
 import EarthquakeSidebar from "./EarthquakeSidebar";
+import RecentEarthquakeBar from "./RecentEarthquakeBar";
 import TimeSlider from "./TimeSlider";
 import type { Earthquake } from "@/data/indiaEarthquakes";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,7 @@ const IndiaMap = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [magnitudeRange, setMagnitudeRange] = useState<[number, number]>([0, 10]);
-  const [yearRange, setYearRange] = useState<[number, number]>([1897, 2026]);
+  const [yearRange, setYearRange] = useState<[number, number]>([1975, 2026]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEqId, setSelectedEqId] = useState<string | null>(null);
 
@@ -133,9 +134,9 @@ const IndiaMap = () => {
     if (!mapContainer.current || mapRef.current) return;
 
     const map = L.map(mapContainer.current, {
-      center: [22.5, 82.8],
-      zoom: 5,
-      maxBounds: L.latLngBounds([5, 60], [40, 100]),
+      center: [20, 78],
+      zoom: 4,
+      maxBounds: L.latLngBounds([-5, 60], [40, 100]),
       maxBoundsViscosity: 1.0,
       zoomControl: false,
     });
@@ -353,9 +354,9 @@ const IndiaMap = () => {
         </div>
 
         <div className="relative rounded-2xl overflow-hidden border border-border/50 shadow-card">
-          <div className="flex flex-col md:flex-row" style={{ height: "650px" }}>
+          <div className="flex flex-col md:flex-row" style={{ height: "700px" }}>
             <div
-              className={`${sidebarOpen ? "w-full md:w-[340px]" : "w-0"} transition-all duration-300 overflow-hidden shrink-0 h-full`}
+              className={`${sidebarOpen ? "w-full md:w-[300px]" : "w-0"} transition-all duration-300 overflow-hidden shrink-0 h-full`}
             >
               <EarthquakeSidebar
                 earthquakes={earthquakes}
@@ -465,6 +466,14 @@ const IndiaMap = () => {
                 />
               </div>
             </div>
+
+            {/* Recent Earthquake Bar on the right */}
+            <div className="hidden md:block w-[280px] shrink-0 h-full">
+              <RecentEarthquakeBar
+                earthquakes={earthquakes}
+                onEarthquakeClick={handleEarthquakeClick}
+              />
+            </div>
           </div>
         </div>
 
@@ -518,7 +527,7 @@ const IndiaMap = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          Data: USGS Earthquake Catalog • Region: South Asia (4.5°N–36.2°N, 66.8°E–94.1°E) • {indiaEarthquakes.length} historical + {liveEarthquakes.length} live events
+          Data: USGS Earthquake Catalog (1975–2026) • Region: Lat [-1.1°, 36.4°] Lon [64.6°, 93.3°] • {indiaEarthquakes.length} historical + {liveEarthquakes.length} live events
         </p>
       </div>
     </section>
