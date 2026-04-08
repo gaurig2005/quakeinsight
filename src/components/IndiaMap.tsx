@@ -354,9 +354,9 @@ const IndiaMap = () => {
         </div>
 
         <div className="relative rounded-2xl overflow-hidden border border-border/50 shadow-card">
-          <div className="flex flex-col md:flex-row" style={{ height: "650px" }}>
+          <div className="flex flex-col md:flex-row" style={{ height: "700px" }}>
             <div
-              className={`${sidebarOpen ? "w-full md:w-[340px]" : "w-0"} transition-all duration-300 overflow-hidden shrink-0 h-full`}
+              className={`${sidebarOpen ? "w-full md:w-[300px]" : "w-0"} transition-all duration-300 overflow-hidden shrink-0 h-full`}
             >
               <EarthquakeSidebar
                 earthquakes={earthquakes}
@@ -465,6 +465,14 @@ const IndiaMap = () => {
                   onPlayToggle={handlePlayToggle}
                 />
               </div>
+            </div>
+
+            {/* Recent Earthquake Bar on the right */}
+            <div className="hidden md:block w-[280px] shrink-0 h-full">
+              <RecentEarthquakeBar
+                earthquakes={earthquakes}
+                onEarthquakeClick={handleEarthquakeClick}
+              />
             </div>
           </div>
         </div>
