@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { indiaEarthquakes, indiaStats } from "@/data/indiaEarthquakes";
 import { indiaBoundaryCoordinates, seismicZones } from "@/data/indiaBoundary";
 import EarthquakeSidebar from "./EarthquakeSidebar";
+import RecentEarthquakeBar from "./RecentEarthquakeBar";
 import TimeSlider from "./TimeSlider";
 import type { Earthquake } from "@/data/indiaEarthquakes";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,7 @@ const IndiaMap = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [magnitudeRange, setMagnitudeRange] = useState<[number, number]>([0, 10]);
-  const [yearRange, setYearRange] = useState<[number, number]>([1897, 2026]);
+  const [yearRange, setYearRange] = useState<[number, number]>([1975, 2026]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEqId, setSelectedEqId] = useState<string | null>(null);
 
@@ -133,9 +134,9 @@ const IndiaMap = () => {
     if (!mapContainer.current || mapRef.current) return;
 
     const map = L.map(mapContainer.current, {
-      center: [22.5, 82.8],
-      zoom: 5,
-      maxBounds: L.latLngBounds([5, 60], [40, 100]),
+      center: [20, 78],
+      zoom: 4,
+      maxBounds: L.latLngBounds([-5, 60], [40, 100]),
       maxBoundsViscosity: 1.0,
       zoomControl: false,
     });
